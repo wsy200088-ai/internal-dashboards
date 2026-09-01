@@ -1,0 +1,8 @@
+# 不要把來源 Excel、產生器的中間檔推上去
+*.xlsx
+*.xlsm
+*.csv
+*.json
+~$*
+.DS_Store
+Thumbs.db
