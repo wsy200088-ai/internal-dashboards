@@ -198,6 +198,51 @@ table.mx tr.mx-sub .mx-v{font-weight:600}
 table.mx .mx-ind{color:var(--muted);margin-right:5px;font-weight:400}
 .sumlead .up,table.mx .up{color:var(--pos-ink)} .sumlead .down,table.mx .down{color:var(--neg-ink)}
 
+/* ===== 修改用編號 ===== */
+[data-id]{position:relative}
+body:not(.ids-on) .idtag{display:none}
+body.ids-on [data-id]{outline:1px dashed color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:3px}
+.idtag{
+  position:absolute;top:-3px;right:-3px;z-index:40;
+  background:var(--brand-deep);color:#fff;font-size:10px;font-weight:700;line-height:1.6;
+  padding:0 6px;border-radius:6px;cursor:pointer;white-space:nowrap;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.02em;
+  box-shadow:0 1px 3px rgba(0,0,0,.25)
+}
+.idtag:hover{filter:brightness(1.2)}
+.idtag.sel{background:var(--c2);outline:2px solid var(--c2)}
+#idsBtn{
+  position:fixed;right:18px;bottom:18px;z-index:120;
+  background:var(--surface);color:var(--brand-deep);border:1.5px solid var(--brand);
+  border-radius:999px;padding:10px 18px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 3px 12px rgba(0,0,0,.15);display:inline-flex;align-items:center;gap:7px
+}
+#idsBtn:hover{background:var(--brand-tint)}
+#idsBtn[aria-pressed="true"]{background:var(--brand-deep);color:#fff;border-color:var(--brand-deep)}
+#toast{
+  position:fixed;left:50%;bottom:86px;transform:translateX(-50%) translateY(8px);z-index:130;
+  background:var(--brand-deep);color:#fff;padding:11px 20px;border-radius:10px;font-size:14px;font-weight:600;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;max-width:80vw
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ===== 圖1 快速篩選列 ===== */
+.qfbar{border:1px solid var(--ring);border-radius:10px;padding:8px 10px;margin-bottom:10px;background:var(--surface-2)}
+.qfrow{display:flex;gap:7px;align-items:flex-start;padding:4px 0}
+.qfrow+.qfrow{border-top:1px dashed var(--grid);margin-top:2px}
+.qflab{flex:none;width:74px;font-size:11.5px;font-weight:700;color:var(--ink-2);padding-top:4px}
+.qfchips{display:flex;flex-wrap:wrap;gap:5px;flex:1}
+.qchip{
+  appearance:none;font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;
+  border:1.5px solid var(--ring);background:var(--surface);color:var(--ink-2);
+  border-radius:7px;padding:3px 9px;white-space:nowrap;line-height:1.4
+}
+.qchip:hover{border-color:var(--brand)}
+.qchip[aria-pressed="true"]{background:var(--brand-tint);border-color:var(--brand);color:var(--brand-deep)}
+.qfall{font-size:11px;color:var(--brand-deep);background:none;border:0;cursor:pointer;font-family:inherit;
+  font-weight:700;padding:3px 5px;align-self:flex-start}
+.qfall:hover{text-decoration:underline}
+.qfall[disabled]{opacity:.35;cursor:default;text-decoration:none}
+
 .psec{margin-top:6px;border:1px solid var(--ring);border-radius:12px;overflow:hidden}
 .psec+.psec{margin-top:12px}
 .phead{display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between;
@@ -244,7 +289,7 @@ body.locked .wrap,body.locked .tip{display:none}
 }
 @media print{
   body{background:#fff}
-  .fsec,.topctl,.mini{display:none!important}
+  .fsec,.topctl,.mini,.idtag,#idsBtn,#toast,.qfbar{display:none!important}
   .card{break-inside:avoid;box-shadow:none}
 }
 </style>
@@ -254,8 +299,8 @@ body.locked .wrap,body.locked .tip{display:none}
 
   <div class="top">
     <div>
-      <h1>FY26 商售目標儀表板</h1>
-      <p class="sub">期初目標 vs 期中目標(實績至 2607,各管道回登完成)　·　資料基準 <span id="gen"></span>　·　單位:未稅金額(元) / 數量(個)</p>
+      <h1 data-id="S1-H" data-edit>FY26 商售目標儀表板</h1>
+      <p class="sub" data-id="S1-P">期初目標 vs 期中目標(實績至 2607,各管道回登完成)　·　資料基準 <span id="gen"></span>　·　單位:未稅金額(元) / 數量(個)</p>
     </div>
     <div class="topctl">
       <div class="seg" role="group" aria-label="指標">
@@ -267,34 +312,34 @@ body.locked .wrap,body.locked .tip{display:none}
     </div>
   </div>
 
-  <div class="banner">
+  <div class="banner" data-id="S2-BANNER">
     <span class="ic">✓</span>
-    <div>本版為<b>各管道回登完成後的最終期中目標</b>(彙整檔 2026-09-09)。舞台劇、樂園兩管道的期中目標<b>已定案</b>,
+    <div data-id="S2-TXT" data-edit>本版為<b>各管道回登完成後的最終期中目標</b>(彙整檔 2026-09-09)。舞台劇、樂園兩管道的期中目標<b>已定案</b>,
       先前版本的「未定案」標記與開關已移除。</div>
   </div>
 
 
-  <div class="kpis" id="kpis"></div>
+  <div class="kpis" id="kpis" data-id="S3-KPI"></div>
 
-  <div class="card fsec">
+  <div class="card fsec" data-id="S4-FILTER">
     <div class="fhead" id="fToggle" role="button" tabindex="0" aria-expanded="true">
-      <h2>篩選　<span class="sub" style="font-weight:400" id="fSummary"></span></h2>
+      <h2 data-id="S4-H">篩選　<span class="sub" style="font-weight:400" id="fSummary"></span></h2>
       <div style="display:flex;gap:8px;align-items:center">
         <button class="mini" id="clearAll">全部重設(勾選全部)</button>
         <span class="sub" id="fCaret">▾</span>
       </div>
     </div>
     <div class="fbody" id="fBody">
-      <p class="chint" style="margin:10px 0 0">預設<b>全部勾選</b>。點卡片可取消/恢復該項目,每一列右邊也有「全選 / 全不選」。卡片上的數字就是該項目在目前條件下的個別數據。</p>
+      <p class="chint" style="margin:10px 0 0" data-id="S4-P" data-edit>預設<b>全部勾選</b>。點卡片可取消/恢復該項目,每一列右邊也有「全選 / 全不選」。卡片上的數字就是該項目在目前條件下的個別數據。</p>
       <div id="filterRows"></div>
     </div>
   </div>
 
-  <div class="card pad" style="margin-bottom:14px">
+  <div class="card pad" style="margin-bottom:14px" data-id="S5-SUM">
     <div class="chead">
       <div>
-        <h2>摘要　事業別 × 管道</h2>
-        <p class="chint" id="sumHint"></p>
+        <h2 data-id="S5-H" data-edit>摘要　事業別 × 管道</h2>
+        <p class="chint" id="sumHint" data-id="S5-P"></p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div class="seg" role="group" aria-label="摘要顯示方式">
@@ -305,16 +350,16 @@ body.locked .wrap,body.locked .tip{display:none}
       <button class="mini" id="sumExp">收合中項明細</button>
       </div>
     </div>
-    <div class="sumlead" id="sumLead"></div>
-    <div id="sumTable"></div>
+    <div class="sumlead" id="sumLead" data-id="S5-LEAD"></div>
+    <div id="sumTable" data-id="S5-T"></div>
   </div>
 
   <div class="grid2">
-    <div class="card pad">
+    <div class="card pad" data-id="S6-TREND">
       <div class="chead">
         <div>
-          <h2 id="mainTitle">月別走勢</h2>
-          <p class="chint" id="mainHint"></p>
+          <h2 id="mainTitle" data-id="S6-H">月別走勢</h2>
+          <p class="chint" id="mainHint" data-id="S6-P"></p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <div class="seg" role="group" aria-label="圖表型式">
@@ -325,19 +370,20 @@ body.locked .wrap,body.locked .tip{display:none}
           <button class="mini" data-tbl="main">▤ 資料表</button>
         </div>
       </div>
-      <div class="legend" style="margin-bottom:8px">
+      <div class="qfbar" id="mainQuick" data-id="S6-F"></div>
+      <div class="legend" style="margin-bottom:8px" data-id="S6-L">
         <span><i class="swatch" style="background:var(--s1)"></i>期初</span>
         <span><i class="swatch" style="background:var(--s2)"></i>期中</span>
       </div>
-      <div class="chartbox" id="mainChart"></div>
+      <div class="chartbox" id="mainChart" data-id="S6-G"></div>
       <div id="mainTable"></div>
     </div>
 
-    <div class="card pad">
+    <div class="card pad" data-id="S7-DIFF">
       <div class="chead">
         <div>
-          <h2>期中 − 期初 差異</h2>
-          <p class="chint">正值 = 期中目標較期初<b>增加</b>,負值 = <b>減少</b>。每根柱子都標了正負號,不必只靠顏色分辨。</p>
+          <h2 data-id="S7-H" data-edit>期中 − 期初 差異</h2>
+          <p class="chint" data-id="S7-P" data-edit>正值 = 期中目標較期初<b>增加</b>,負值 = <b>減少</b>。每根柱子都標了正負號,不必只靠顏色分辨。</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <div class="seg" role="group" aria-label="差異視角">
@@ -348,37 +394,39 @@ body.locked .wrap,body.locked .tip{display:none}
           <button class="mini" data-tbl="diff">▤ 資料表</button>
         </div>
       </div>
-      <div class="legend" style="margin-bottom:8px">
+      <div class="legend" style="margin-bottom:8px" data-id="S7-L">
         <span><i class="swatch" style="background:var(--pos)"></i>增加 (+)</span>
         <span><i class="swatch" style="background:var(--neg)"></i>減少 (−)</span>
       </div>
-      <div class="chartbox" id="diffChart"></div>
+      <div class="chartbox" id="diffChart" data-id="S7-G"></div>
       <div id="diffTable"></div>
     </div>
 
-    <div class="card pad">
+    <div class="card pad" data-id="S8-PROD">
       <div class="chead">
         <div>
-          <h2 id="prodTitle">商品排行</h2>
-          <p class="chint" id="prodHint"></p>
+          <h2 id="prodTitle" data-id="S8-H">商品排行</h2>
+          <p class="chint" id="prodHint" data-id="S8-P"></p>
         </div>
         <button class="mini" data-tbl="prod">▤ 資料表</button>
       </div>
-      <div class="tabs" id="prodTabs" style="margin-bottom:10px"></div>
-      <div class="legend" id="chLegend" style="margin-bottom:10px"></div>
-      <div class="chartbox" id="prodChart"></div>
+      <div class="tabs" id="prodTabs" style="margin-bottom:10px" data-id="S8-TABS"></div>
+      <div class="legend" id="chLegend" style="margin-bottom:10px" data-id="S8-L"></div>
+      <div class="chartbox" id="prodChart" data-id="S8-G"></div>
       <div id="prodTable"></div>
     </div>
   </div>
 
-  <footer>
-    <b>資料來源</b>　期初:★FY26管道商售＿期初目標(彙整).xlsx;期中:★FY26管道商售＿期中目標(實績至2607)_彙整.xlsx(2026-09-09 最終版)。皆由「管道數量」「管道銷售額(未稅)」交叉表,逐商品 × 11 管道 × 12 月展開而成。<br>
-    <b>口徑</b>　財務年度 FY26(202604~202703);金額為未稅,四捨五入至整數;不含「全體」與「小計」欄位。<br>
-    <b>期中數量修正</b>　來源檔「管道數量」U/V/W 欄(shopline-生活館 5/6/7月)第128~302列公式誤取下一列製編,已修正後才展開;逐筆清單見期中檔「數量修正註記」分頁。<br>
-    <b>版本</b>　各管道(含舞台劇、樂園)期中目標均已回登定案,本版為最終期中目標。
+  <footer data-id="S9-FOOT">
+    <div data-id="S9-P1" data-edit><b>資料來源</b>　期初:★FY26管道商售＿期初目標(彙整).xlsx;期中:★FY26管道商售＿期中目標(實績至2607)_彙整.xlsx(2026-09-09 最終版)。皆由「管道數量」「管道銷售額(未稅)」交叉表,逐商品 × 11 管道 × 12 月展開而成。</div>
+    <div data-id="S9-P2" data-edit><b>口徑</b>　財務年度 FY26(202604~202703);金額為未稅,四捨五入至整數;不含「全體」與「小計」欄位。</div>
+    <div data-id="S9-P3" data-edit><b>期中數量修正</b>　來源檔「管道數量」U/V/W 欄(shopline-生活館 5/6/7月)第128~302列公式誤取下一列製編,已修正後才展開;逐筆清單見期中檔「數量修正註記」分頁。</div>
+    <div data-id="S9-P4" data-edit><b>版本</b>　各管道(含舞台劇、樂園)期中目標均已回登定案,本版為最終期中目標。</div>
   </footer>
 </div>
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
+<button id="idsBtn" type="button" aria-pressed="false" title="顯示 / 隱藏修改用編號">🏷 編號</button>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <div class="gate" id="gate">
   <div class="gate-box">
@@ -540,13 +588,13 @@ function renderKpi(){
   const cls = d >= 0 ? 'up' : 'down';
   const u = unit();
   document.getElementById('kpis').innerHTML = `
-    <div class="card kpi"><div class="lab"><i class="swatch" style="background:var(--s1)"></i>期初目標</div>
+    <div class="card kpi" data-id="S3-K1"><div class="lab"><i class="swatch" style="background:var(--s1)"></i>期初目標</div>
       <div class="val">${compact(t[0])}</div><div class="sub2">${full(t[0])} ${u}</div></div>
-    <div class="card kpi"><div class="lab"><i class="swatch" style="background:var(--s2)"></i>期中目標</div>
+    <div class="card kpi" data-id="S3-K2"><div class="lab"><i class="swatch" style="background:var(--s2)"></i>期中目標</div>
       <div class="val">${compact(t[1])}</div><div class="sub2">${full(t[1])} ${u}</div></div>
-    <div class="card kpi"><div class="lab">期中 − 期初</div>
+    <div class="card kpi" data-id="S3-K3"><div class="lab">期中 − 期初</div>
       <div class="val ${cls}">${signed(d)}</div><div class="sub2">${d >= 0 ? '+' : '−'}${full(Math.abs(d))} ${u}</div></div>
-    <div class="card kpi"><div class="lab">增減幅度</div>
+    <div class="card kpi" data-id="S3-K4"><div class="lab">增減幅度</div>
       <div class="val ${cls}">${t[0] ? (d >= 0 ? '+' : '−') + pct(Math.abs(d), t[0]) : '—'}</div>
       <div class="sub2">以期初為基準</div></div>`;
 }
@@ -588,7 +636,7 @@ function renderFilters(){
         <button class="rowbtn" data-none="${dim.k}"${n === 0 ? ' disabled' : ''}>全不選</button>
         <span style="font-size:11px;color:var(--muted);align-self:center">${n}/${tot}</span>
       </div>`;
-    html += `<div class="frow"><div class="flab">${dim.lab}${hintHtml}${foldBtns.length ? '<br>' + foldBtns.join(' ') : ''}${rowBtns}</div>
+    html += `<div class="frow" data-id="S4-R-${dim.lab}"><div class="flab">${dim.lab}${hintHtml}${foldBtns.length ? '<br>' + foldBtns.join(' ') : ''}${rowBtns}</div>
       <div class="chips">${chips}</div></div>`;
   }
   host.innerHTML = html;
@@ -679,16 +727,16 @@ function renderSummary(){
   groups.forEach(g => {
     const rowCells = cols.map(c => cell(...sum(g.kids, m => A[m].c[c]), false)).join('');
     const rowTot = sum(g.kids, m => A[m].t);
-    body += `<tr class="mx-g"><th class="mx-h">${esc(D.bg[g.b])}</th>${rowCells}${cell(rowTot[0], rowTot[1], true)}</tr>`;
+    body += `<tr class="mx-g" data-id="S5-T-${esc(D.bg[g.b])}"><th class="mx-h">${esc(D.bg[g.b])}</th>${rowCells}${cell(rowTot[0], rowTot[1], true)}</tr>`;
     // 中項明細:該大項底下有 2 個以上中項時才拆(目前只有「周邊商品」)
     if(state.smExpand && g.kids.length > 1){
       g.kids.forEach(m => {
         const cs = cols.map(c => cell(A[m].c[c][0], A[m].c[c][1], false)).join('');
-        body += `<tr class="mx-sub"><th class="mx-h"><span class="mx-ind">└</span>${esc(D.md[m])}</th>${cs}${cell(A[m].t[0], A[m].t[1], true)}</tr>`;
+        body += `<tr class="mx-sub" data-id="S5-T-${esc(D.md[m])}"><th class="mx-h"><span class="mx-ind">└</span>${esc(D.md[m])}</th>${cs}${cell(A[m].t[0], A[m].t[1], true)}</tr>`;
       });
     }
   });
-  const foot = `<tr class="mx-f"><th class="mx-h">合計</th>` +
+  const foot = `<tr class="mx-f" data-id="S5-T-合計"><th class="mx-h">合計</th>` +
     cols.map(c => cell(colT[c][0], colT[c][1], true)).join('') +
     cell(grand[0], grand[1], true) + `</tr>`;
 
@@ -924,7 +972,7 @@ function renderProd(){
 
     const svg = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(D.bg[bgi])}商品排行">${g}${marks}</svg>`;
     const d = m.tot[1] - m.tot[0];
-    html += `<div class="psec"><div class="phead">
+    html += `<div class="psec" data-id="S8-SEC-${esc(D.bg[bgi])}"><div class="phead">
         <span><span class="pt">${esc(D.bg[bgi])}</span>　<span class="pv">期初 ${compact(m.tot[0])}　期中 ${compact(m.tot[1])}　<b class="${d>=0?'up':'down'}">${signed(d)}</b>　·　共 ${all.length} 個商品</span></span>
         ${all.length > 20 ? `<button class="mini" data-pexp="${bgi}">${open ? '收合(只看前 20)' : `展開全部 (${all.length})`}</button>` : ''}
       </div><div class="pbody"${scroll ? ' style="max-height:520px;overflow-y:auto;overflow-x:hidden"' : ''}>${svg}</div></div>`;
@@ -973,7 +1021,11 @@ function renderTable(hostId, key, head, rows){
 }
 
 /* ============ 總繪製 ============ */
-function renderAll(){ renderKpi(); renderFilters(); renderSummary(); renderMain(); renderDiff(); renderProd(); }
+function renderAll(){
+  renderKpi(); renderFilters(); renderSummary(); renderMain(); renderDiff(); renderProd();
+  if(typeof renderQuickFilter === 'function') renderQuickFilter();
+  if(document.body.classList.contains('ids-on') && typeof refreshIdTags === 'function') refreshIdTags();
+}
 
 /* ============ 事件 ============ */
 document.getElementById('filterRows').addEventListener('click', e => {
@@ -1074,6 +1126,109 @@ document.getElementById('fBody').style.display = state.fopen ? '' : 'none';
 document.getElementById('fCaret').textContent = state.fopen ? '▾' : '▸';
 document.getElementById('fToggle').setAttribute('aria-expanded', state.fopen);
 renderAll();
+
+/* ============ 圖1 快速篩選列(事業別中項 / 管道 / 月份,與上方篩選連動)============ */
+function renderQuickFilter(){
+  const host = document.getElementById('mainQuick');
+  if(!host) return;
+  const QF = [
+    { k:'md', lab:'事業別', items:() => D.md },
+    { k:'ch', lab:'管道',   items:() => D.ch },
+    { k:'ym', lab:'月份',   items:() => MONLAB }
+  ];
+  host.innerHTML = QF.map(g => {
+    const items = g.items(), sel = state.sel[g.k];
+    const chips = items.map((n, i) =>
+      `<button class="qchip" aria-pressed="${sel.has(i)}" data-qf="${g.k}" data-i="${i}">${esc(n)}</button>`
+    ).join('');
+    const full = sel.size === items.length, none = sel.size === 0;
+    return `<div class="qfrow"><div class="qflab">${g.lab}</div><div class="qfchips">${chips}</div>` +
+      `<button class="qfall" data-qfall="${g.k}"${full ? ' disabled' : ''}>全選</button>` +
+      `<button class="qfall" data-qfnone="${g.k}"${none ? ' disabled' : ''}>全不選</button></div>`;
+  }).join('');
+}
+document.getElementById('mainQuick').addEventListener('click', e => {
+  const a = e.target.closest('[data-qfall]');
+  if(a){ selectAll(a.dataset.qfall); renderAll(); return; }
+  const n = e.target.closest('[data-qfnone]');
+  if(n){ selectNone(n.dataset.qfnone); renderAll(); return; }
+  const c = e.target.closest('[data-qf]');
+  if(!c) return;
+  const s = state.sel[c.dataset.qf], i = +c.dataset.i;
+  s.has(i) ? s.delete(i) : s.add(i);
+  renderAll();
+});
+
+/* ============ 修改用編號 ============ */
+function refreshIdTags(){
+  document.querySelectorAll('[data-id]').forEach(el => {
+    let t = el.firstElementChild;
+    if(!(t && t.classList && t.classList.contains('idtag'))){
+      t = document.createElement('span');
+      t.className = 'idtag';
+      t.textContent = el.dataset.id;
+      t.title = '點一下複製編號';
+      el.insertBefore(t, el.firstChild);
+    }else if(t.textContent !== el.dataset.id){
+      t.textContent = el.dataset.id;
+    }
+    // 巢狀區塊的編號依層級往下錯開,避免互相遮住
+    let depth = 0, q = el.parentElement;
+    while(q){ if(q.dataset && q.dataset.id) depth++; q = q.parentElement; }
+    t.style.top = (-3 + depth * 15) + 'px';
+  });
+}
+let toastTimer = null;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('on'), 2200);
+}
+function copyId(el){
+  const id = el.textContent;
+  const done = () => toast('已複製 ' + id);
+  const fallback = () => {
+    const r = document.createRange(); r.selectNodeContents(el);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    el.classList.add('sel');
+    setTimeout(() => el.classList.remove('sel'), 2200);
+    toast('已選取 ' + id + ',請按 Ctrl+C 複製');
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(id).then(done).catch(fallback);
+    }else{ fallback(); }
+  }catch(e){ fallback(); }
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('.idtag');
+  if(!t) return;
+  e.preventDefault(); e.stopPropagation();
+  copyId(t);
+}, true);
+
+const idsBtn = document.getElementById('idsBtn');
+idsBtn.addEventListener('click', () => {
+  const on = !document.body.classList.contains('ids-on');
+  document.body.classList.toggle('ids-on', on);
+  idsBtn.setAttribute('aria-pressed', on);
+  idsBtn.textContent = on ? '🏷 隱藏編號' : '🏷 編號';
+  if(on){
+    // 摺疊區塊要展開,否則看不到裡面的編號
+    if(!state.fopen){
+      state.fopen = true;
+      document.getElementById('fBody').style.display = '';
+      document.getElementById('fCaret').textContent = '▾';
+      document.getElementById('fToggle').setAttribute('aria-expanded', true);
+    }
+    refreshIdTags();
+    toast('編號已顯示,點編號即可複製');
+  }
+});
+
+/* part2.js 的 renderAll() 先於本檔執行,補畫一次快速篩選列 */
+renderQuickFilter();
 
 }
 /* ============ 純 JS SHA-256(不依賴 WebCrypto,file:// 也能用)============ */
@@ -1176,6 +1331,8 @@ function decrypt(key, ct){
         document.body.classList.remove('locked');
         startApp(JSON.parse(json));
       }catch(e){
+        window.__startErr = (e && e.message ? e.message : String(e)) + ' | ' + (e && e.stack ? e.stack : '');
+        try{ console.error('startApp 失敗:', e); }catch(_){}
         msg.textContent = '解密失敗:' + e.message; msg.className = 'gate-msg err';
         btn.disabled = false; inp.disabled = false; busy = false;
       }
