@@ -198,6 +198,35 @@ table.mx tr.mx-sub .mx-v{font-weight:600}
 table.mx .mx-ind{color:var(--muted);margin-right:5px;font-weight:400}
 .sumlead .up,table.mx .up{color:var(--pos-ink)} .sumlead .down,table.mx .down{color:var(--neg-ink)}
 
+/* ===== 商品查詢 ===== */
+.lkbox{position:relative;margin-bottom:12px}
+#lkInput{
+  width:100%;font:inherit;font-size:15px;padding:10px 14px;border-radius:10px;
+  border:1.5px solid var(--ring);background:var(--surface-2);color:var(--ink)
+}
+#lkInput::placeholder{color:var(--muted)}
+#lkInput:focus{outline:none;border-color:var(--brand);background:var(--surface);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%,transparent)}
+.lksug{
+  position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:50;
+  background:var(--surface);border:1px solid var(--ring);border-radius:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,.14);max-height:280px;overflow-y:auto
+}
+.lksug button{
+  display:block;width:100%;text-align:left;font:inherit;font-size:13px;cursor:pointer;
+  background:none;border:0;border-bottom:1px solid var(--grid);padding:8px 13px;color:var(--ink)
+}
+.lksug button:last-child{border-bottom:0}
+.lksug button:hover,.lksug button.on{background:var(--brand-tint)}
+.lksug .sc{font-family:ui-monospace,Consolas,monospace;color:var(--brand-deep);font-weight:700;margin-right:9px}
+.lksug .sm{color:var(--muted);font-size:11.5px;margin-left:8px}
+.lksug .none{padding:14px;color:var(--muted);font-size:13px;text-align:center}
+.lkhead{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:baseline;margin:2px 0 12px;font-size:13px}
+.lkhead .n{font-size:17px;font-weight:700}
+.lkhead .c{font-family:ui-monospace,Consolas,monospace;color:var(--brand-deep);font-weight:700}
+.lkhead .m{color:var(--ink-2)}
+.lkhead .v{font-variant-numeric:tabular-nums}
+
 /* ===== 修改用編號 ===== */
 [data-id]{position:relative}
 body:not(.ids-on) .idtag{display:none}
@@ -414,6 +443,30 @@ body.locked .wrap,body.locked .tip{display:none}
       <div class="legend" id="chLegend" style="margin-bottom:10px" data-id="S8-L"></div>
       <div class="chartbox" id="prodChart" data-id="S8-G"></div>
       <div id="prodTable"></div>
+    </div>
+    <div class="card pad" data-id="S10-LOOKUP">
+      <div class="chead">
+        <div>
+          <h2 data-id="S10-H" data-edit>商品查詢</h2>
+          <p class="chint" data-id="S10-P" data-edit>輸入製編或商品名稱,查看該商品在各管道 × 各月份的期初 vs 期中。此區<b>不受上方篩選影響</b>,一律顯示該商品的完整資料。</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="seg" role="group" aria-label="查詢顯示方式">
+            <button data-lk="d" aria-pressed="true">差異</button>
+            <button data-lk="p" aria-pressed="false">增減%</button>
+            <button data-lk="b" aria-pressed="false">期初→期中</button>
+          </div>
+          <button class="mini" id="lkCopy">⧉ 複製表格</button>
+        </div>
+      </div>
+      <div class="lkbox" data-id="S10-Q">
+        <input type="search" id="lkInput" autocomplete="off" spellcheck="false"
+               placeholder="輸入製編或商品名稱,例如 20250FE00 或 點讀圖鑑">
+        <div class="lksug" id="lkSug" hidden></div>
+      </div>
+      <div class="lkhead" id="lkHead" data-id="S10-INFO"></div>
+      <div id="lkTable" data-id="S10-T"></div>
+      <div class="chartbox" id="lkChart" data-id="S10-G"></div>
     </div>
   </div>
 
@@ -1024,6 +1077,7 @@ function renderTable(hostId, key, head, rows){
 function renderAll(){
   renderKpi(); renderFilters(); renderSummary(); renderMain(); renderDiff(); renderProd();
   if(typeof renderQuickFilter === 'function') renderQuickFilter();
+  if(window.__lkReady) renderLookup();          // 旗標避開暫時性死區
   if(document.body.classList.contains('ids-on') && typeof refreshIdTags === 'function') refreshIdTags();
 }
 
@@ -1229,6 +1283,238 @@ idsBtn.addEventListener('click', () => {
 
 /* part2.js 的 renderAll() 先於本檔執行,補畫一次快速篩選列 */
 renderQuickFilter();
+
+/* ============ 商品查詢(不受上方篩選影響)============ */
+state.lkP = null;      // 目前選定的商品 index
+state.lkM = 'd';       // 顯示方式:d 差異 / p 增減% / b 期初→期中
+
+/* 商品 -> 細分管道 × 月份 × 版本 的彙總,只算一次 */
+let LKIDX = null;
+function lkIndex(){
+  if(LKIDX) return LKIDX;
+  const nCh = D.ch0.length, nYm = D.ym.length;
+  LKIDX = {};
+  for(const r of R){
+    let e = LKIDX[r.p];
+    if(!e){
+      e = { q:[[], []], a:[[], []] };
+      for(let v = 0; v < 2; v++){
+        e.q[v] = Array.from({length:nCh}, () => new Array(nYm).fill(0));
+        e.a[v] = Array.from({length:nCh}, () => new Array(nYm).fill(0));
+      }
+      LKIDX[r.p] = e;
+    }
+    e.q[r.v][r.ch0][r.ym] += r.q;
+    e.a[r.v][r.ch0][r.ym] += r.a;
+  }
+  return LKIDX;
+}
+/* 商品所屬的事業別(取第一筆) */
+let LKMD = null;
+function lkMd(){
+  if(LKMD) return LKMD;
+  LKMD = {};
+  for(const r of R) if(!(r.p in LKMD)) LKMD[r.p] = r.md;
+  return LKMD;
+}
+
+function lkSearch(kw){
+  kw = kw.trim().toLowerCase();
+  if(!kw) return [];
+  const idx = lkIndex();
+  const out = [];
+  D.prod.forEach((pr, i) => {
+    if(!(i in idx)) return;
+    const code = String(pr[0]).toLowerCase(), name = String(pr[1]).toLowerCase();
+    let score = -1;
+    if(code.startsWith(kw)) score = 0;
+    else if(name.startsWith(kw)) score = 1;
+    else if(code.includes(kw)) score = 2;
+    else if(name.includes(kw)) score = 3;
+    if(score >= 0) out.push({ i, score });
+  });
+  const idx2 = lkIndex();
+  out.sort((x, y) => x.score - y.score ||
+    (idx2[y.i].a[1].flat().reduce((s, v) => s + v, 0) - idx2[x.i].a[1].flat().reduce((s, v) => s + v, 0)));
+  return out.slice(0, 30).map(o => o.i);
+}
+
+function renderLkSuggest(list, active){
+  const box = document.getElementById('lkSug');
+  if(!list.length){
+    box.innerHTML = '<div class="none">找不到符合的商品</div>';
+    box.hidden = false; return;
+  }
+  const md = lkMd();
+  box.innerHTML = list.map((i, k) =>
+    `<button type="button" class="${k === active ? 'on' : ''}" data-lkp="${i}">
+       <span class="sc">${esc(D.prod[i][0])}</span>${esc(D.prod[i][1])}
+       <span class="sm">${esc(D.md[md[i]] || '')}</span>
+     </button>`).join('');
+  box.hidden = false;
+}
+
+function renderLookup(){
+  const head = document.getElementById('lkHead');
+  const tbl  = document.getElementById('lkTable');
+  const cbox = document.getElementById('lkChart');
+  if(state.lkP === null || !(state.lkP in lkIndex())){
+    head.innerHTML = '';
+    tbl.innerHTML = '<div class="empty">請在上方輸入製編或商品名稱</div>';
+    cbox.innerHTML = '';
+    return;
+  }
+  const p = state.lkP, e = lkIndex()[p];
+  const M = state.metric === 'a' ? e.a : e.q;
+  const nCh = D.ch0.length, nYm = D.ym.length;
+
+  const chTot = [[], []], ymTot = [[], []], grand = [0, 0];
+  for(let v = 0; v < 2; v++){
+    chTot[v] = M[v].map(row => row.reduce((s, x) => s + x, 0));
+    ymTot[v] = Array.from({length:nYm}, (_, m) => M[v].reduce((s, row) => s + row[m], 0));
+    grand[v] = chTot[v].reduce((s, x) => s + x, 0);
+  }
+  const chOn = [];
+  for(let c = 0; c < nCh; c++) if(chTot[0][c] || chTot[1][c]) chOn.push(c);
+
+  // ---- 標頭 ----
+  const gd = grand[1] - grand[0];
+  head.innerHTML =
+    `<span class="c">${esc(D.prod[p][0])}</span><span class="n">${esc(D.prod[p][1])}</span>` +
+    `<span class="m">${esc(D.md[lkMd()[p]] || '')}</span>` +
+    `<span class="v">期初 <b>${compact(grand[0])}</b> → 期中 <b>${compact(grand[1])}</b></span>` +
+    `<span class="v ${gd >= 0 ? 'up' : 'down'}" style="font-weight:700">${signed(gd)}` +
+    `${grand[0] ? '(' + (gd >= 0 ? '+' : '−') + pct(Math.abs(gd), grand[0]) + ')' : ''}</span>` +
+    `<span class="m">單位:${unit()}</span>`;
+
+  // ---- 矩陣 ----
+  let maxAbs = 0;
+  chOn.forEach(c => { for(let m = 0; m < nYm; m++){
+    const d = Math.abs(M[1][c][m] - M[0][c][m]); if(d > maxAbs) maxAbs = d; } });
+
+  const cell = (p0, p1, strong) => {
+    const d = p1 - p0;
+    if(!p0 && !p1) return `<td class="mx-e${strong ? ' mx-t' : ''}">–</td>`;
+    const t = maxAbs ? Math.min(1, Math.abs(d) / maxAbs) : 0;
+    const tint = (!strong && d) ? `background:color-mix(in srgb, ${d > 0 ? 'var(--pos)' : 'var(--neg)'} ${(t*20).toFixed(0)}%, var(--surface));` : '';
+    let inner;
+    if(state.lkM === 'b') inner = `<span class="mx-a">${compact(p0)}</span><span class="mx-arw">→</span><span class="mx-b">${compact(p1)}</span>`;
+    else if(state.lkM === 'p') inner = `<span class="mx-v ${d >= 0 ? 'up' : 'down'}">${p0 ? (d >= 0 ? '+' : '−') + pct(Math.abs(d), p0) : (p1 ? '新增' : '—')}</span>`;
+    else inner = `<span class="mx-v ${d >= 0 ? 'up' : 'down'}">${d ? signed(d) : '0'}</span>`;
+    return `<td class="${strong ? 'mx-t' : ''}" style="${tint}" title="期初 ${full(p0)} / 期中 ${full(p1)} ${unit()}　差異 ${signed(d)}">${inner}</td>`;
+  };
+
+  const head2 = `<tr><th class="mx-h">管道 ＼ 月份</th>` +
+    MONLAB.map(m => `<th>${m}</th>`).join('') + `<th class="mx-t">合計</th></tr>`;
+  const body = chOn.map(c =>
+    `<tr data-id="S10-T-${esc(D.ch0[c])}"><th class="mx-h">${esc(D.ch0[c])}</th>` +
+    MONLAB.map((_, m) => cell(M[0][c][m], M[1][c][m], false)).join('') +
+    cell(chTot[0][c], chTot[1][c], true) + `</tr>`).join('');
+  const foot = `<tr class="mx-f" data-id="S10-T-合計"><th class="mx-h">合計</th>` +
+    MONLAB.map((_, m) => cell(ymTot[0][m], ymTot[1][m], true)).join('') +
+    cell(grand[0], grand[1], true) + `</tr>`;
+  tbl.innerHTML = `<div class="mxwrap"><table class="mx"><thead>${head2}</thead><tbody>${body}${foot}</tbody></table></div>`;
+
+  // ---- 月別走勢圖 ----
+  const w = W(cbox), h = 230, mg = {t:26, r:16, b:32, l:66};
+  const pw = w - mg.l - mg.r, ph = h - mg.t - mg.b;
+  const mx = Math.max(1, ...ymTot[0], ...ymTot[1]);
+  const tk = ticks(0, mx, 4), Y = v => mg.t + ph - v / (tk.hi || 1) * ph;
+  const bw = pw / nYm, cx = i => mg.l + bw * i + bw / 2;
+  let g = tk.arr.map(v => `<line x1="${mg.l}" y1="${Y(v)}" x2="${mg.l+pw}" y2="${Y(v)}" stroke="var(--grid)" stroke-width="1"/>
+      <text x="${mg.l-9}" y="${Y(v)+4}" text-anchor="end" style="fill:var(--muted);font-size:11px">${compact(v)}</text>`).join('');
+  g += MONLAB.map((s2, i) => `<text x="${cx(i)}" y="${mg.t+ph+19}" text-anchor="middle" style="fill:var(--muted);font-size:11.5px">${s2}</text>`).join('');
+  g += `<line x1="${mg.l}" y1="${mg.t+ph}" x2="${mg.l+pw}" y2="${mg.t+ph}" stroke="var(--axis)" stroke-width="1"/>`;
+  const iw = Math.max(3, (bw * 0.62 - 2) / 2), grp = iw * 2 + 2;
+  let marks = '';
+  for(let i = 0; i < nYm; i++){
+    for(let v = 0; v < 2; v++){
+      const val = [ymTot[0][i], ymTot[1][i]][v];
+      const bh = Math.max(0, mg.t + ph - Y(val));
+      if(bh <= 0) continue;
+      marks += `<path d="${barV(cx(i) - grp/2 + v*(iw+2), Y(val), iw, bh, 4)}" fill="var(--s${v+1})"/>`;
+    }
+    marks += `<rect class="lkhit" data-i="${i}" x="${mg.l+bw*i}" y="${mg.t}" width="${bw}" height="${ph}" fill="transparent"/>`;
+  }
+  cbox.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="該商品月別走勢">${g}${marks}</svg>`;
+  cbox.querySelectorAll('.lkhit').forEach(el => {
+    el.onmousemove = ev => {
+      const i = +el.dataset.i;
+      showTip(tipRows(MONLAB[i] + '（' + D.ym[i] + '）', [
+        { k:'期初', v:full(ymTot[0][i]) + ' ' + unit(), c:'var(--s1)' },
+        { k:'期中', v:full(ymTot[1][i]) + ' ' + unit(), c:'var(--s2)' },
+        { k:'差異', v:signed(ymTot[1][i] - ymTot[0][i]) + ' ' + unit() }
+      ]), ev);
+    };
+    el.onmouseleave = hideTip;
+  });
+  if(document.body.classList.contains('ids-on')) refreshIdTags();
+}
+
+/* ---- 搜尋互動 ---- */
+(function(){
+  const inp = document.getElementById('lkInput');
+  const sug = document.getElementById('lkSug');
+  let list = [], active = -1;
+
+  function close(){ sug.hidden = true; active = -1; }
+  function pick(i){
+    state.lkP = i;
+    inp.value = D.prod[i][0] + '　' + D.prod[i][1];
+    close(); renderLookup();
+  }
+  inp.addEventListener('input', () => {
+    list = lkSearch(inp.value); active = -1;
+    if(inp.value.trim()) renderLkSuggest(list, active); else close();
+  });
+  inp.addEventListener('focus', () => { if(inp.value.trim() && list.length) renderLkSuggest(list, active); });
+  inp.addEventListener('keydown', ev => {
+    if(sug.hidden || !list.length) return;
+    if(ev.key === 'ArrowDown'){ ev.preventDefault(); active = Math.min(active + 1, list.length - 1); renderLkSuggest(list, active); }
+    else if(ev.key === 'ArrowUp'){ ev.preventDefault(); active = Math.max(active - 1, 0); renderLkSuggest(list, active); }
+    else if(ev.key === 'Enter'){ ev.preventDefault(); pick(list[active >= 0 ? active : 0]); }
+    else if(ev.key === 'Escape'){ close(); }
+  });
+  sug.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-lkp]');
+    if(b) pick(+b.dataset.lkp);
+  });
+  document.addEventListener('click', ev => {
+    if(!ev.target.closest('.lkbox')) close();
+  });
+
+  document.querySelectorAll('[data-lk]').forEach(b => b.onclick = () => {
+    state.lkM = b.dataset.lk;
+    document.querySelectorAll('[data-lk]').forEach(x => x.setAttribute('aria-pressed', x === b));
+    renderLookup();
+  });
+
+  document.getElementById('lkCopy').onclick = () => {
+    const t = document.querySelector('#lkTable table.mx');
+    if(!t){ toast('請先查詢一個商品'); return; }
+    const rows = [...t.querySelectorAll('tr')].map(tr =>
+      [...tr.children].map(td => td.textContent.replace(/\s+/g, ' ').trim()).join('\t')).join('\n');
+    const title = document.getElementById('lkHead').textContent.replace(/\s+/g, ' ').trim();
+    const txt = title + '\n' + rows;
+    const ok = () => toast('表格已複製,可直接貼進 Excel');
+    const fb = () => {
+      const ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select();
+      try{ document.execCommand('copy'); ok(); }
+      catch(e){ toast('複製失敗,請手動選取表格'); }
+      ta.remove();
+    };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(txt).then(ok).catch(fb);
+      else fb();
+    }catch(e){ fb(); }
+  };
+})();
+
+window.__lkReady = true;
+renderLookup();
 
 }
 /* ============ 純 JS SHA-256(不依賴 WebCrypto,file:// 也能用)============ */
